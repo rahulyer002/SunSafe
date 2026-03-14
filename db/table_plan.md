@@ -22,12 +22,24 @@ Fields:
 Purpose:
 Stores current UV readings for a location, likely from live API data.
 
-### 3. UV_HISTORICAL
+### UV_HISTORICAL
+Source:
+- ARPANSA Melbourne UV data (2010–2024)
+
+Processed file:
+- data/processed/uv_historical_melbourne_all_years_clean.csv
+
 Fields:
-- uv_hist_id (PK)
-- location_id (FK)
 - date_time
+- year
+- month
+- day
+- hour
+- minute
+- latitude
+- longitude
 - uv_index
+- city
 
 Purpose:
 Stores historical UV data for trend analysis and awareness features.
@@ -49,3 +61,5 @@ Stores cancer incidence statistics for awareness visualisations.
 - This structure is based on the current ER diagram in the presentation.
 - Final schema may still change depending on onboarding scope and feature updates.
 - UV_CURRENT may remain partially API-driven rather than fully persisted.
+
+
