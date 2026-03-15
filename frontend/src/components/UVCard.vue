@@ -45,6 +45,10 @@ defineProps({
     text-align: left;
 }
 
+.uv-minimal {
+    background: linear-gradient(135deg, #ffffff, #ffffff);
+}
+
 .uv-low {
     background: linear-gradient(135deg, #2ecc71, #27ae60);
 }

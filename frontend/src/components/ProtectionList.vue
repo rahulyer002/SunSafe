@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <h3>Protective Actions</h3>
+    <h3>⚠️ Protective Actions</h3>
 
     <ul v-if="uvIndex !== null">
       <li v-for="item in actions" :key="item">

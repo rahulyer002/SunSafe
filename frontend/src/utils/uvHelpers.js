@@ -1,4 +1,5 @@
 export function getRiskLevel(uvIndex) {
+  if (uvIndex === 0) return "Minimal";
   if (uvIndex <= 2) return "Low";
   if (uvIndex <= 5) return "Moderate";
   if (uvIndex <= 7) return "High";
@@ -12,6 +13,7 @@ export function getRiskColorClass(riskLevel) {
   if (riskLevel === "High") return "uv-high";
   if (riskLevel === "Very High") return "uv-very-high";
   if (riskLevel === "Extreme") return "uv-extreme";
+  if (riskLevel === "Minimal") return "uv-minimal";
   return "";
 }
 
@@ -28,6 +30,10 @@ export function getProtectionAdvice(uvIndex) {
     return "UV data is not available right now.";
   }
   const burnTime = getEstimatedBurnTime(uvIndex);
+
+  if (uvIndex === 0) {
+    return `Your skin is at minimal risk, but it's always good to be cautious when spending extended time outdoors.`;
+  }
 
   if (uvIndex <= 2) {
     return `Your skin is at low risk, but sun protection is still recommended for long outdoor exposure.`;

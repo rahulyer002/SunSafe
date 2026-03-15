@@ -1,14 +1,22 @@
 <template>
     <div class="container">
-        <h1>SunSafe Dashboard</h1>
+        <h1>SunSafe Dashboard 🕶</h1>
+        <p class="subtitle">
+            Real-time UV monitoring and protection advice
+        </p>
 
         <WeatherCard :location-status="locationStatus" :latitude="latitude" :longitude="longitude"
-            :temperature="temperature" :humidity="humidity" :wind-speed="windSpeed" :weather-desc="weatherDesc" />
+            :temperature="temperature" :humidity="humidity" :wind-speed="windSpeed" :weather-desc="weatherDesc"
+            :icon="icon" :timezone="timezone" />
 
-        <UVCard :loading="loading" :error="error" :uv-index="uvIndex" :risk-level="riskLevel" :advice="advice" :risk-color-class="riskColorClass" />
+        <UVCard :loading="loading" :error="error" :uv-index="uvIndex" :risk-level="riskLevel" :advice="advice"
+            :risk-color-class="riskColorClass" />
 
         <ProtectionList :uv-index="uvIndex" :risk-level="riskLevel" />
     </div>
+    <p class="update-time">
+        Last updated: {{ lastUpdated }}
+    </p>
 </template>
 
 <script setup>
@@ -25,10 +33,13 @@ const temperature = ref(null)
 const humidity = ref(null)
 const windSpeed = ref(null)
 const weatherDesc = ref('')
+const icon = ref('')
+const timezone = ref('')
 const uvIndex = ref(null)
 const loading = ref(false)
 const error = ref('')
 const locationStatus = ref('Waiting for location permission...')
+const lastUpdated = ref('')
 
 const riskLevel = computed(() =>
     uvIndex.value !== null ? getRiskLevel(uvIndex.value) : ''
@@ -75,12 +86,14 @@ async function loadUVData() {
         const data = await fetchCurrentUV(coords.lat, coords.lon)
         temperature.value = Math.round(data.current?.temp ?? 0) ?? null
         humidity.value = data.current?.humidity ?? null
-
+        icon.value = data.current?.weather?.[0]?.icon ?? ''
         windSpeed.value = data.current?.wind_speed ?? null
+        timezone.value = data.timezone ?? ''
 
         weatherDesc.value =
             data.current?.weather?.[0]?.description ?? ''
         uvIndex.value = data.current?.uvi ?? null
+        lastUpdated.value = new Date().toLocaleTimeString()
 
         if (uvIndex.value === null) {
             throw new Error('UV index not found in API response')
@@ -93,8 +106,14 @@ async function loadUVData() {
     }
 }
 
+let refreshTimer = null
+
 onMounted(() => {
     loadUVData()
+
+    refreshTimer = setInterval(() => {
+        loadUVData()
+    }, 600000)  
 })
 </script>
 
@@ -103,5 +122,17 @@ onMounted(() => {
     max-width: 900px;
     margin: auto;
     padding: 20px;
+}
+
+.subtitle {
+    color: #666;
+    margin-top: -10px;
+    margin-bottom: 25px;
+}
+
+.update-time {
+    margin-top: 15px;
+    font-size: 13px;
+    color: #888;
 }
 </style>
