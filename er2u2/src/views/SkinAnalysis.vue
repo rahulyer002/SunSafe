@@ -2,7 +2,7 @@
   <div class="analysis-page">
     <div class="header">
       <h1>Skin Health Analysis</h1>
-      <p class="subtitle">Personalized for your unique skin profile (US 2.2)</p>
+      <p class="subtitle">Real-time database integration (US 2.2)</p>
     </div>
 
     <div class="glass-card">
@@ -14,33 +14,34 @@
           :class="['skin-icon', { active: form.skinType === type.id }]"
           :style="{ backgroundColor: type.color }"
           @click="selectSkin(type.id)"
-          :title="type.name"
         >
           <span class="type-label">Type {{ type.id }}</span>
         </div>
       </div>
-      <p class="skin-desc">{{ selectedSkinDesc }}</p>
+      <p class="skin-desc">{{ selectedSkinDesc }} (Mapped to <b>{{ toneCategory }}</b> for Database)</p>
     </div>
 
     <div class="glass-card uv-display-card" :style="{ borderLeftColor: uvSeverityColor }">
       <div class="control-item">
         <label>Adjust UV Index: <span :style="{ color: uvSeverityColor, fontWeight: 'bold' }">{{ form.uvIndex }}</span></label>
         <input 
-          type="range" 
-          min="1" 
-          max="11" 
+          type="range" min="1" max="11" 
           v-model.number="form.uvIndex" 
           @input="updateChart"
           class="uv-slider"
         >
       </div>
-      <div class="uv-status" :style="{ backgroundColor: uvSeverityColor + '22', color: uvSeverityColor }">
-        Risk Level: {{ uvRiskLevel }}
+      
+      <div class="db-result-box" :style="{ backgroundColor: uvSeverityColor + '15' }">
+        <div class="result-item">
+          <span class="label">Database Risk Level:</span>
+          <span class="value" :style="{ color: uvSeverityColor }">{{ apiRiskLevel }}</span>
+        </div>
       </div>
     </div>
 
     <div class="glass-card chart-container">
-      <div ref="chartDom" style="width: 100%; height: 300px;"></div>
+      <div ref="chartDom" style="width: 100%; height: 320px;"></div>
     </div>
 
     <div class="glass-card insight">
@@ -56,11 +57,17 @@
 <script setup>
 import { ref, onMounted, reactive, computed, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
+import axios from 'axios';
 
 const chartDom = ref(null);
 let myChart = null;
+const backendData = ref([]);
 
-// Static data for skin types based on Fitzpatrick Scale
+const form = reactive({
+  skinType: 1,
+  uvIndex: 8
+});
+
 const skinTypes = [
   { id: 1, color: '#F9EAD3', name: 'Very Fair' },
   { id: 2, color: '#F3D9B5', name: 'Fair' },
@@ -70,31 +77,74 @@ const skinTypes = [
   { id: 6, color: '#312529', name: 'Black' }
 ];
 
-const form = reactive({
-  skinType: 1,
-  uvIndex: 8
+onMounted(async () => {
+  // Initialize ECharts instance
+  myChart = echarts.init(chartDom.value);
+  updateChart();
+  window.addEventListener('resize', () => myChart && myChart.resize());
+
+  try {
+    // Fetching data from your Render backend
+    const response = await axios.get('https://sunsafe-zku7.onrender.com/skin/');
+    backendData.value = response.data;
+  } catch (error) {
+    console.error("API Connection Error:", error);
+  }
 });
 
-// Logic for UV Risk Level and Colors (Standard Australian UV scale)
-const uvRiskLevel = computed(() => {
-  if (form.uvIndex <= 2) return 'Low';
-  if (form.uvIndex <= 5) return 'Moderate';
-  if (form.uvIndex <= 7) return 'High';
-  if (form.uvIndex <= 10) return 'Very High';
-  return 'Extreme';
+onUnmounted(() => {
+  window.removeEventListener('resize', () => myChart && myChart.resize());
+  if (myChart) myChart.dispose();
 });
 
+/**
+ * Maps Fitzpatrick scale (1-6) to backend categories (Fair/Medium/Dark)
+ * Based on the structure in your JSON screenshot.
+ */
+const toneCategory = computed(() => {
+  if (form.skinType <= 2) return "Fair";
+  if (form.skinType <= 4) return "Medium";
+  return "Dark";
+});
+
+/**
+ * Filters backendData to find the matching predicted_damage
+ * Matches both the mapped skin_tone and the UV range.
+ */
+const apiRiskLevel = computed(() => {
+  if (backendData.value.length === 0) return "Connecting...";
+
+  const match = backendData.value.find(item => {
+    return item.skin_tone === toneCategory.value && 
+           form.uvIndex >= item.uv_index_min && 
+           form.uvIndex <= item.uv_index_max;
+  });
+
+  return match ? match.predicted_damage : "Calculating...";
+});
+
+/**
+ * Dynamic color calculation based on UV Index severity
+ */
 const uvSeverityColor = computed(() => {
-  if (form.uvIndex <= 2) return '#4ade80'; // Green
-  if (form.uvIndex <= 5) return '#fde047'; // Yellow
-  if (form.uvIndex <= 7) return '#fb923c'; // Orange
-  if (form.uvIndex <= 10) return '#ef4444'; // Red
-  return '#a855f7'; // Purple (Extreme)
+  if (form.uvIndex <= 2) return '#4ade80';
+  if (form.uvIndex <= 5) return '#fde047';
+  if (form.uvIndex <= 7) return '#fb923c';
+  if (form.uvIndex <= 10) return '#ef4444';
+  return '#a855f7';
 });
 
 const selectedSkinDesc = computed(() => {
   const type = skinTypes.find(t => t.id === form.skinType);
-  return type ? `${type.name} skin tone selected.` : '';
+  return type ? type.name : '';
+});
+
+/**
+ * Relatable language generation combining burn time and backend risk levels
+ */
+const analysisMessage = computed(() => {
+  const burnTime = Math.max(8, (150 / (form.uvIndex * (7 - form.skinType))).toFixed(0));
+  return `Database confirms a "${apiRiskLevel.value}" risk level for your ${toneCategory.value} skin tone. At UV ${form.uvIndex}, cumulative damage begins in ${burnTime} minutes.`;
 });
 
 const selectSkin = (id) => {
@@ -102,74 +152,39 @@ const selectSkin = (id) => {
   updateChart();
 };
 
-// ... keep previous analysisMessage logic ...
-const analysisMessage = computed(() => {
-  const riskFactor = form.skinType * (12 - form.uvIndex);
-  const burnTime = Math.max(8, (150 / (form.uvIndex * (7 - form.skinType))).toFixed(0));
-
-  if (riskFactor < 15 || form.skinType <= 2) {
-    return `Critical Warning: Your skin has very low melanin protection. Damage can begin in just ${burnTime} minutes at this UV level. [cite: 30, 46]`;
-  }
-  return `Note: While your skin has some protection, UV Index ${form.uvIndex} still poses cumulative risks. Reapply sunscreen regularly. [cite: 52]`;
-});
-
-// ... keep previous updateChart logic ...
 /**
- * Function: updateChart
- * Updates the ECharts instance and configures the tooltip for data display.
- * Aligned with US 2.1: Visualizing UV impacts.
+ * Updates the chart data points and theme color
  */
 const updateChart = () => {
   if (!myChart) return;
-
-  const timeLabels = ['10m', '20m', '30m', '40m', '50m', '60m'];
   const sensitivity = (7 - form.skinType); 
-  const dataPoints = [0.1, 0.25, 0.45, 0.7, 0.85, 1.0].map(val => 
-    (val * form.uvIndex * sensitivity).toFixed(2)
-  );
+  const dataPoints = [0.1, 0.25, 0.45, 0.7, 0.85, 1.0].map(val => (val * form.uvIndex * sensitivity).toFixed(2));
 
-  const option = {
-    title: { 
-      text: 'Predicted Damage Accumulation', 
-      textStyle: { color: '#fff', fontSize: 16 } 
-    },
-    
+  myChart.setOption({
     tooltip: { 
       trigger: 'axis',
-      backgroundColor: 'rgba(30, 41, 59, 0.9)', // 
+      backgroundColor: 'rgba(15, 23, 42, 0.9)',
       borderColor: uvSeverityColor.value,
       textStyle: { color: '#fff' },
-      formatter: (params) => {
-        const data = params[0];
-        return `
-          <div style="padding: 5px;">
-            <b style="color:${uvSeverityColor.value}">Exposure: ${data.name}</b><br/>
-            Risk Index: ${data.value}<br/>
-            <small>Status: ${uvRiskLevel.value}</small>
-          </div>
-        `;
-      }
+      formatter: (params) => `Exposure: ${params[0].name}<br/>Risk Index: ${params[0].value}`
     },
-    grid: { left: '10%', right: '10%', bottom: '15%' },
     xAxis: { 
       type: 'category', 
-      data: timeLabels, 
-      axisLabel: { color: '#fff' } 
+      data: ['10m', '20m', '30m', '40m', '50m', '60m'], 
+      axisLabel: { color: '#94a3b8' } 
     },
     yAxis: { 
       type: 'value', 
-      name: 'Risk Index', 
-      axisLabel: { color: '#fff' },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+      axisLabel: { color: '#94a3b8' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
     },
     series: [{
-      name: 'UV Damage',
       data: dataPoints,
       type: 'line',
       smooth: true,
-      lineStyle: { color: uvSeverityColor.value, width: 4 },
-      symbol: 'circle', // 
+      symbol: 'circle',
       symbolSize: 8,
+      lineStyle: { color: uvSeverityColor.value, width: 4 },
       itemStyle: { color: uvSeverityColor.value },
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -178,34 +193,41 @@ const updateChart = () => {
         ])
       }
     }]
-  };
-
-  myChart.setOption(option);
+  });
 };
-
-onMounted(() => {
-  myChart = echarts.init(chartDom.value);
-  updateChart();
-});
 </script>
 
 <style scoped>
 .analysis-page { padding: 20px; background: #0f172a; min-height: 100vh; color: white; }
-.glass-card { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; margin-bottom: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+.header { text-align: center; margin-bottom: 30px; }
+.subtitle { opacity: 0.5; font-size: 0.85rem; }
 
-/* Skin Icons Layout */
-.skin-icons-container { display: flex; justify-content: space-between; margin: 15px 0; }
-.skin-icon {
-  width: 45px; height: 45px; border-radius: 50%; border: 3px solid transparent; 
-  cursor: pointer; transition: all 0.3s; position: relative;
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(15px);
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
 }
-.skin-icon.active { border-color: #fbbf24; transform: scale(1.15); box-shadow: 0 0 15px #fbbf2455; }
-.type-label { position: absolute; bottom: -20px; left: 0; width: 100%; font-size: 10px; text-align: center; }
-.skin-desc { font-size: 0.8rem; opacity: 0.7; text-align: center; margin-top: 25px; }
 
-/* UV Card specific styling */
-.uv-display-card { border-left: 6px solid #ccc; transition: border-color 0.5s ease; }
-.uv-status { padding: 8px 15px; border-radius: 10px; font-weight: bold; margin-top: 10px; text-align: center; }
-.uv-slider { width: 100%; height: 8px; border-radius: 5px; appearance: none; background: #334155; }
-.uv-slider::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; background: white; border-radius: 50%; cursor: pointer; }
+.skin-icons-container { display: flex; justify-content: space-between; margin: 25px 0; }
+.skin-icon {
+  width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; 
+  cursor: pointer; transition: 0.4s; position: relative;
+}
+.skin-icon.active { border-color: #fbbf24; transform: scale(1.25); box-shadow: 0 0 20px rgba(251,191,36,0.3); }
+.type-label { position: absolute; bottom: -24px; left: 0; width: 100%; font-size: 10px; text-align: center; color: #64748b; }
+.skin-desc { font-size: 0.8rem; text-align: center; margin-top: 30px; color: #64748b; }
+
+.uv-display-card { border-left: 8px solid #ccc; transition: 0.6s ease; }
+.db-result-box { margin-top: 20px; padding: 15px; border-radius: 16px; }
+.result-item { display: flex; justify-content: space-between; align-items: center; }
+.result-item .value { font-size: 1.2rem; font-weight: 900; }
+
+.uv-slider { width: 100%; accent-color: #fbbf24; }
+
+.insight-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.insight-header h3 { color: #fbbf24; margin: 0; font-size: 1.1rem; }
+.analysis-text { line-height: 1.7; color: #cbd5e1; }
 </style>
