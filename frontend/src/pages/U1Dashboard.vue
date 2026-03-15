@@ -1,19 +1,26 @@
 <template>
     <div class="container">
-        <h1>SunSafe Dashboard 🕶</h1>
+        <div class="background-video">
+            <video autoplay muted loop playsinline>
+                <source src="/background.mp4" type="video/mp4">
+            </video>
+        </div>
+        <h1 style="font-size: 50px;">SunSafe Dashboard 🕶</h1>
         <p class="subtitle">
             Real-time UV monitoring and protection advice
         </p>
+        <WeatherCard class="card-enter card-delay-1" :location-status="locationStatus" :latitude="latitude"
+            :longitude="longitude" :temperature="temperature" :humidity="humidity" :wind-speed="windSpeed"
+            :weather-desc="weatherDesc" :icon="icon" :timezone="timezone" />
 
-        <WeatherCard :location-status="locationStatus" :latitude="latitude" :longitude="longitude"
-            :temperature="temperature" :humidity="humidity" :wind-speed="windSpeed" :weather-desc="weatherDesc"
-            :icon="icon" :timezone="timezone" />
 
-        <UVCard :loading="loading" :error="error" :uv-index="uvIndex" :risk-level="riskLevel" :advice="advice"
-            :risk-color-class="riskColorClass" />
+        <UVCard class="card-enter card-delay-2" :loading="loading" :error="error" :uv-index="uvIndex"
+            :risk-level="riskLevel" :advice="advice" :risk-color-class="riskColorClass" :humidity="humidity"
+            :wind-speed="windSpeed" />
 
-        <ProtectionList :uv-index="uvIndex" :risk-level="riskLevel" />
+        <ProtectionList class="card-enter card-delay-3" :uv-index="uvIndex" :risk-level="riskLevel" />
     </div>
+
     <p class="update-time">
         Last updated: {{ lastUpdated }}
     </p>
@@ -113,7 +120,7 @@ onMounted(() => {
 
     refreshTimer = setInterval(() => {
         loadUVData()
-    }, 600000)  
+    }, 600000)
 })
 </script>
 
@@ -134,5 +141,50 @@ onMounted(() => {
     margin-top: 15px;
     font-size: 13px;
     color: #888;
+}
+
+.background-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+}
+
+.background-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-enter {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeUp 3s ease-out forwards;
+}
+
+.card-delay-1 {
+    animation-delay: 0.1s;
+}
+
+.card-delay-2 {
+    animation-delay: 0.4s;
+}
+
+.card-delay-3 {
+    animation-delay: 0.7s;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>

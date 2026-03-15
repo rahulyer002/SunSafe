@@ -8,6 +8,12 @@
         <template v-else>
             <h1>{{ uvIndex }}</h1>
             <p>Risk Level: {{ riskLevel }}</p>
+            <p v-if="humidity !== null">
+                <strong>💧 Humidity:</strong> &nbsp&nbsp&nbsp{{ humidity }}%
+            </p>
+            <p v-if="windSpeed !== null">
+                <strong>🌬️ Wind Speed:</strong> &nbsp&nbsp&nbsp{{ windSpeed }} m/s
+            </p>
             <div class="adviceBox">
                 <h3>☀️ Protection Advice:</h3>
                 <p>{{ advice }}</p>
@@ -23,7 +29,9 @@ defineProps({
     uvIndex: Number,
     riskLevel: String,
     advice: String,
-    riskColorClass: String
+    riskColorClass: String,
+    humidity: Number,
+    windSpeed: Number,
 })
 </script>
 
@@ -45,12 +53,13 @@ defineProps({
     text-align: left;
 }
 
+
 .uv-minimal {
-    background: linear-gradient(135deg, #ffffff, #ffffff);
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
 }
 
 .uv-low {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    background: linear-gradient(135deg, #cccc2e, #c5c532);
 }
 
 .uv-moderate {

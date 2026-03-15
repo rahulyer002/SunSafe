@@ -11,12 +11,12 @@
         <p v-if="temperature !== null">
             <strong>🌡️ Temperature:</strong> {{ temperature }}°C
         </p>
-        <p v-if="humidity !== null">
+        <!-- <p v-if="humidity !== null">
             <strong>💧 Humidity:</strong> {{ humidity }}%
         </p>
         <p v-if="windSpeed !== null">
             <strong>🌬️ Wind Speed:</strong> {{ windSpeed }} m/s
-        </p>
+        </p> -->
         <p v-if="weatherDesc">
             <strong>🌤️ Weather:</strong> {{ weatherDesc }}
         </p>
@@ -59,6 +59,7 @@ function getWeatherIconUrl(iconCode) {
     border-radius: 15px;
     margin-bottom: 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #87b4f9, #c3cfe2);
 }
 
 .weather-bg-icon {
