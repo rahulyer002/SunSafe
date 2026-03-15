@@ -1,0 +1,7 @@
+data/raw/
+.DS_Store
+
+data/raw/
+data/processed/uv_historical_melbourne_all_years_clean.csv
+data/processed/uv_historical_melbourne_2024_clean.csv
+.DS_Store
