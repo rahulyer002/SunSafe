@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router"
 
-// loading pages
+// pages
 import U1Dashboard from "../pages/U1Dashboard.vue"
 import AustralianData from "../pages/AustralianData.vue"
+import SkinAnalysis from "../pages/SkinAnalysis.vue"
 
 const routes = [
   {
@@ -14,6 +15,11 @@ const routes = [
     path: "/australian-data",
     name: "AustralianData",
     component: AustralianData
+  },
+  {
+    path: "/skin-analysis",
+    name: "SkinAnalysis",
+    component: SkinAnalysis
   }
 ]
 
