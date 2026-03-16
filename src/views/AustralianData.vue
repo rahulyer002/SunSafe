@@ -2,139 +2,228 @@
 
 <div class="page">
 
+<!-- Skin Cancer Chart -->
 <h2>Skin Cancer Incidence in Australia</h2>
 
 <div class="filters">
 
 <label>Start Year</label>
-<select v-model.number="startYear" @change="updateChart">
-<option v-for="y in years" :key="y" :value="y">
-  {{y}}
-</option>
+<select v-model.number="cancerStartYear" @change="renderCancerChart">
+<option v-for="y in cancerYears" :key="y" :value="y">{{y}}</option>
 </select>
 
 <label>End Year</label>
-<select v-model.number="endYear" @change="updateChart">
-<option v-for="y in years" :key="y" :value="y">
-  {{y}}
-</option>
+<select v-model.number="cancerEndYear" @change="renderCancerChart">
+<option v-for="y in cancerYears" :key="y" :value="y">{{y}}</option>
 </select>
 
 <label>City</label>
-<select v-model="city" @change="updateChart">
+<select v-model="cancerCity" @change="renderCancerChart">
 <option value="Melbourne">Melbourne</option>
 </select>
 
 </div>
 
-<canvas ref="chartCanvas"></canvas>
+<div class="chart-container">
+<canvas ref="cancerChart"></canvas>
+</div>
+
+
+<!-- UV Chart -->
+<h2>Trend of Heat in Australia</h2>
+
+<div class="filters">
+
+<label>Start Year</label>
+<select v-model.number="uvStartYear" @change="renderUVChart">
+<option v-for="y in uvYears" :key="y" :value="y">{{y}}</option>
+</select>
+
+<label>End Year</label>
+<select v-model.number="uvEndYear" @change="renderUVChart">
+<option v-for="y in uvYears" :key="y" :value="y">{{y}}</option>
+</select>
+
+<label>City</label>
+<select v-model="uvCity" @change="renderUVChart">
+<option value="Melbourne">Melbourne</option>
+</select>
+
+</div>
+
+<div class="chart-container">
+<canvas ref="uvChart"></canvas>
+</div>
 
 </div>
 
 </template>
 
+
 <script>
 
 import { Chart } from "chart.js/auto"
 
+let cancerChart = null
+let uvChart = null
+
 export default {
 
 data(){
-
 return{
 
-chart:null,
+// cancer filter
+cancerStartYear:null,
+cancerEndYear:null,
+cancerCity:"Melbourne",
 
-startYear:2000,
-endYear:2020,
-city:"Melbourne",
+// uv filter
+uvStartYear:null,
+uvEndYear:null,
+uvCity:"Melbourne",
 
-years:[2000,2005,2010,2015,2020],
+// data
+cancerData:[],
+uvData:[],
 
-dataSet:[
-{year:2000, incidence_rate:50, city:"Melbourne"},
-{year:2005, incidence_rate:55, city:"Melbourne"},
-{year:2010, incidence_rate:65, city:"Melbourne"},
-{year:2015, incidence_rate:75, city:"Melbourne"},
-{year:2020, incidence_rate:85, city:"Melbourne"}
-]
+// years
+cancerYears:[],
+uvYears:[]
 
 }
-
 },
 
 mounted(){
-
-this.createChart()
-
+this.fetchData()
 },
 
 methods:{
 
-getFilteredData(){
+async fetchData(){
 
-return this.dataSet.filter(d =>
+const cancerRes = await fetch("https://sunsafe-zku7.onrender.com/cancer/")
+const cancer = await cancerRes.json()
 
-d.year >= this.startYear &&
-d.year <= this.endYear &&
-d.city === this.city
+const uvRes = await fetch("https://sunsafe-zku7.onrender.com/uv/")
+const uv = await uvRes.json()
 
-)
+this.cancerData = cancer.map(d=>({
+year:Number(d.year),
+incidence_rate:Number(d.incidence_rate),
+city:d.city
+}))
+
+this.uvData = uv.map(d=>({
+year:Number(d.year),
+uv_index:Number(d.uv_index),
+city:d.city
+}))
+
+this.cancerYears = [...new Set(this.cancerData.map(d=>d.year))].sort((a,b)=>a-b)
+this.uvYears = [...new Set(this.uvData.map(d=>d.year))].sort((a,b)=>a-b)
+
+this.cancerStartYear = this.cancerYears[0]
+this.cancerEndYear = this.cancerYears[this.cancerYears.length-1]
+
+this.uvStartYear = this.uvYears[0]
+this.uvEndYear = this.uvYears[this.uvYears.length-1]
+
+this.$nextTick(()=>{
+this.renderCancerChart()
+this.renderUVChart()
+})
 
 },
 
-createChart(){
+getCancerFiltered(){
 
-const ctx = this.$refs.chartCanvas.getContext("2d")
+return this.cancerData
+.filter(d =>
+d.year >= this.cancerStartYear &&
+d.year <= this.cancerEndYear &&
+d.city === this.cancerCity
+)
+.sort((a,b)=>a.year-b.year)
 
-const filtered = this.getFilteredData()
+},
 
-this.chart = new Chart(ctx,{
+getUVFiltered(){
+
+return this.uvData
+.filter(d =>
+d.year >= this.uvStartYear &&
+d.year <= this.uvEndYear &&
+d.city === this.uvCity
+)
+.sort((a,b)=>a.year-b.year)
+
+},
+
+renderCancerChart(){
+
+if(!this.$refs.cancerChart) return
+
+const ctx = this.$refs.cancerChart.getContext("2d")
+
+const data = this.getCancerFiltered()
+
+if(cancerChart){
+cancerChart.destroy()
+}
+
+cancerChart = new Chart(ctx,{
 
 type:"line",
 
 data:{
-
-labels: filtered.map(d => d.year),
-
+labels:data.map(d=>d.year),
 datasets:[{
-
 label:"Cases per 100,000",
-
-data: filtered.map(d => d.incidence_rate),
-
-borderColor:"green",
-
-backgroundColor:"rgba(0,150,0,0.2)",
-
+data:data.map(d=>d.incidence_rate),
+borderColor:"#0a7f2e",
+backgroundColor:"rgba(10,127,46,0.2)",
 tension:0.3,
-
 fill:true
-
 }]
-
 },
 
-options:{
-responsive:true,
-maintainAspectRatio:false
-}
+options:{responsive:true,maintainAspectRatio:false}
 
 })
 
 },
 
-updateChart(){
+renderUVChart(){
 
-if(!this.chart) return
+if(!this.$refs.uvChart) return
 
-const filtered = this.getFilteredData()
+const ctx = this.$refs.uvChart.getContext("2d")
 
-this.chart.data.labels = filtered.map(d => d.year)
+const data = this.getUVFiltered()
 
-this.chart.data.datasets[0].data = filtered.map(d => d.incidence_rate)
+if(uvChart){
+uvChart.destroy()
+}
 
-this.chart.update()
+uvChart = new Chart(ctx,{
+
+type:"line",
+
+data:{
+labels:data.map(d=>d.year),
+datasets:[{
+label:"UV Index",
+data:data.map(d=>d.uv_index),
+borderColor:"#ff7b00",
+backgroundColor:"rgba(255,123,0,0.2)",
+tension:0.3,
+fill:true
+}]
+},
+
+options:{responsive:true,maintainAspectRatio:false}
+
+})
 
 }
 
@@ -144,10 +233,11 @@ this.chart.update()
 
 </script>
 
+
 <style>
 
 .page{
-width:700px;
+width:900px;
 margin:auto;
 margin-top:40px;
 text-align:center;
@@ -156,18 +246,14 @@ text-align:center;
 .filters{
 margin-bottom:20px;
 display:flex;
-gap:15px;
+gap:20px;
 justify-content:center;
-align-items:center;
 }
 
-select{
-padding:5px;
-}
-
-canvas{
-margin-top:20px;
-height:400px;
+.chart-container{
+width:900px;
+height:420px;
+margin-bottom:50px;
 }
 
 </style>
