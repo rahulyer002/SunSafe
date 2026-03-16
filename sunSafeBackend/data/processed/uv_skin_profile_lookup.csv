@@ -1,0 +1,16 @@
+skin_tone,uv_index_min,uv_index_max,risk_level,predicted_damage_accumulation,recommended_action
+Fair,0,2,Low,Low,Minimal protection needed
+Fair,3,5,Moderate,Moderate,Use sunscreen and sunglasses
+Fair,6,7,High,High,Limit exposure and seek shade
+Fair,8,10,Very High,Very High,Avoid prolonged sun exposure
+Fair,11,20,Extreme,Extreme,Minimise sun exposure immediately
+Medium,0,2,Low,Low,Minimal protection needed
+Medium,3,5,Moderate,Low to Moderate,Use sunscreen if outdoors
+Medium,6,7,High,Moderate,Seek shade during peak UV
+Medium,8,10,Very High,High,Use strong protection
+Medium,11,20,Extreme,Very High,Avoid prolonged exposure
+Dark,0,2,Low,Very Low,Minimal protection needed
+Dark,3,5,Moderate,Low,Protection still recommended
+Dark,6,7,High,Moderate,Use sunscreen and limit exposure
+Dark,8,10,Very High,High,Strong protection recommended
+Dark,11,20,Extreme,Very High,Avoid prolonged exposure
