@@ -1,8 +1,12 @@
 <template>
+    <div>
+        <NavBar />
+    </div>>
     <div class="container">
-        <h1 style="font-size: 50px;">SunSafe Dashboard 🕶</h1>
+        <h1 style="font-size: 50px;color: white;">SunSafe Dashboard 🕶</h1>
         <p class="subtitle">
-            Real-time UV monitoring and protection advice
+            Your personal sun safety dashboard for real-time UV monitoring, weather insights, forecasts, and smart
+            protection guidance.
         </p>
 
         <div class="search-bar">
@@ -39,7 +43,32 @@
             <div class="right-panel">
                 <div class="future-card-placeholder card-enter card-delay-3">
                     <h3>Future Forecast</h3>
-                    <p>Coming soon........</p>
+
+                    <div v-if="dailyForecast.length" class="forecast-list">
+                        <div v-for="day in dailyForecast" :key="day.dt" class="forecast-item">
+                            <div class="forecast-day">
+                                <div class="weekday">
+                                    {{ getWeekday(day.dt) }}
+                                </div>
+
+                                <div class="date">
+                                    {{ getDate(day.dt) }}
+                                </div>
+                            </div>
+
+                            <img :src="`https://openweathermap.org/img/wn/${day.weather?.[0]?.icon}@2x.png`"
+                                :alt="day.weather?.[0]?.description || 'weather icon'" class="forecast-icon" />
+
+                            <div class="forecast-temp">
+                                {{ Math.round(day.temp?.max) }}° / {{ Math.round(day.temp?.min) }}°
+                            </div>
+
+                            <div class="forecast-uv">
+                                UV {{ Math.round(day.uvi ?? 0) }}
+                            </div>
+                        </div>
+                    </div>
+                    <p v-else>Loading forecast...</p>
                 </div>
             </div>
         </div>
@@ -51,6 +80,7 @@
 </template>
 
 <script setup>
+import NavBar from '../components/NavBar.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import WeatherCard from '../components/WeatherCard.vue'
 import UVCard from '../components/UVCard.vue'
@@ -73,6 +103,7 @@ const locationStatus = ref('Waiting for location permission...')
 const lastUpdated = ref('')
 const searchQuery = ref('')
 const currentLocationMode = ref(true)
+const dailyForecast = ref([])
 
 const riskLevel = computed(() =>
     uvIndex.value !== null ? getRiskLevel(uvIndex.value) : ''
@@ -145,6 +176,7 @@ async function loadWeatherAndUV(lat, lon, labelText) {
     weatherDesc.value = data.current?.weather?.[0]?.description ?? ''
     uvIndex.value = data.current?.uvi ?? null
     lastUpdated.value = new Date().toLocaleTimeString()
+    dailyForecast.value = (data.daily || []).slice(0, 8)
 
     if (uvIndex.value === null) {
         throw new Error('UV index not found in API response')
@@ -232,14 +264,23 @@ onUnmounted(() => {
         clearInterval(refreshTimer)
     }
 })
+
+
+function getWeekday(timestamp) {
+    return new Date(timestamp * 1000)
+        .toLocaleDateString('en-AU', { weekday: 'short' })
+}
+
+function getDate(timestamp) {
+    return new Date(timestamp * 1000)
+        .toLocaleDateString('en-AU', {
+            day: 'numeric',
+            month: 'short'
+        })
+}
 </script>
 
 <style>
-
-.body{
-    background: #0F3D5E;
-}
-
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -321,28 +362,35 @@ onUnmounted(() => {
 
 .main-layout {
     display: grid;
-    grid-template-columns: minmax(760px, 2.4fr) minmax(320px, 1fr);
+    grid-template-columns: minmax(760px, 2fr) minmax(320px, 1.4fr);
     gap: 24px;
     margin-top: 20px;
     align-items: stretch;
+}
+
+.left-panel,
+.right-panel {
+    min-width: 0;
+    align-self: stretch;
 }
 
 .left-panel {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    min-width: 0;
+    height: 100%;
 }
 
 .right-panel {
-    min-width: 0;
     display: flex;
+    height: 100%;
 }
 
 .dashboard-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(280px, 1fr));
     gap: 20px;
+    align-items: stretch;
 }
 
 .dashboard-card {
@@ -353,16 +401,25 @@ onUnmounted(() => {
 .future-card-placeholder {
     background: rgba(240, 240, 240, 0.75);
     border-radius: 24px;
-    padding: 30px;
+    padding: 24px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     color: #555;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: stretch;
     width: 100%;
-    height: 100%;
+    flex: 1;
+    min-height: 100%;
     box-sizing: border-box;
+    text-align: left;
+}
+
+.future-card-placeholder h3 {
+    margin: 0 0 20px 0;
+    font-size: 30px;
+    font-weight: 700;
+    color: #333;
     text-align: center;
 }
 
@@ -454,6 +511,87 @@ onUnmounted(() => {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Additional styles for forecast list */
+.forecast-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    margin-top: 0;
+    flex: 1;
+}
+
+.forecast-item {
+    display: grid;
+    grid-template-columns: 70px 60px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    color: #1f2d3d;
+}
+
+.forecast-day {
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.weekday {
+    font-size: 15px;
+}
+
+.date {
+    font-size: 13px;
+    color: #666;
+}
+
+.forecast-icon {
+    width: 42px;
+    height: 42px;
+}
+
+.forecast-temp {
+    font-weight: 500;
+}
+
+.forecast-uv {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0F3D5E;
+}
+
+@media (max-width: 768px) {
+    .forecast-item {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "day icon"
+            "temp uv";
+        row-gap: 6px;
+    }
+
+    .forecast-day {
+        grid-area: day;
+    }
+
+    .forecast-icon {
+        grid-area: icon;
+        justify-self: end;
+    }
+
+    .forecast-temp {
+        grid-area: temp;
+    }
+
+    .forecast-uv {
+        grid-area: uv;
+        justify-self: end;
     }
 }
 </style>

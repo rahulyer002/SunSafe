@@ -1,6 +1,12 @@
 <template>
     <div class="card">
-        <h3>📍 Location</h3>
+        <!-- <h3>📍 Location</h3> -->
+        <p v-if="temperature !== null" style="font-size: 24px;">
+            <strong>🌡️ Temperature:</strong> {{ temperature }}°C
+        </p>
+        <p v-if="weatherDesc" style="font-size: 24px;">
+            <strong>🌤️ Weather:</strong> {{ weatherDesc }}
+        </p>
         <p><strong>📳 Status:</strong> {{ locationStatus }}</p>
         <!-- <p v-if="latitude && longitude">
             <strong>🗺️ Coordinates:</strong> {{ latitude }}, {{ longitude }}
@@ -8,18 +14,14 @@
         <p v-if="timezone">
             <strong>🏙 Timezone:</strong> {{ timezone }}
         </p>
-        <p v-if="temperature !== null">
-            <strong>🌡️ Temperature:</strong> {{ temperature }}°C
-        </p>
+
         <!-- <p v-if="humidity !== null">
             <strong>💧 Humidity:</strong> {{ humidity }}%
         </p>
         <p v-if="windSpeed !== null">
             <strong>🌬️ Wind Speed:</strong> {{ windSpeed }} m/s
         </p> -->
-        <p v-if="weatherDesc">
-            <strong>🌤️ Weather:</strong> {{ weatherDesc }}
-        </p>
+        
         <img v-if="icon" :src="getWeatherIconUrl(icon)" class="weather-bg-icon" />
     </div>
 </template>
@@ -56,7 +58,7 @@ function getWeatherIconUrl(iconCode) {
     position: relative;
     overflow: hidden;
     padding: 15px;
-    border-radius: 15px;
+    border-radius: 24px;
     margin-bottom: 15px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     background: linear-gradient(135deg, #87b4f9, #c3cfe2);

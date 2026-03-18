@@ -1,5 +1,7 @@
 <template>
-
+    <div>
+        <NavBar />
+    </div>
 <div class="page">
 
 <!-- Skin Cancer Chart -->
@@ -61,6 +63,7 @@
 
 
 <script>
+
 
 import { Chart } from "chart.js/auto"
 
@@ -233,6 +236,9 @@ options:{responsive:true,maintainAspectRatio:false}
 
 </script>
 
+<script setup>
+import NavBar from '../components/NavBar.vue'
+</script>
 
 <style>
 

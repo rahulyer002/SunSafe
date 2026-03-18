@@ -1,4 +1,7 @@
 <template>
+      <div>
+        <NavBar />
+    </div>
   <div class="analysis-page">
     <div class="page-shell">
       <div class="header">
@@ -89,6 +92,7 @@
 </template>
 
 <script setup>
+import NavBar from '../components/NavBar.vue'
 import { ref, onMounted, reactive, computed, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import axios from 'axios';
