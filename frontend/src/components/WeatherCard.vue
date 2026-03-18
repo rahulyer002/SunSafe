@@ -2,9 +2,9 @@
     <div class="card">
         <h3>📍 Location</h3>
         <p><strong>📳 Status:</strong> {{ locationStatus }}</p>
-        <p v-if="latitude && longitude">
+        <!-- <p v-if="latitude && longitude">
             <strong>🗺️ Coordinates:</strong> {{ latitude }}, {{ longitude }}
-        </p>
+        </p> -->
         <p v-if="timezone">
             <strong>🏙 Timezone:</strong> {{ timezone }}
         </p>

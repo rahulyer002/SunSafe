@@ -14,3 +14,9 @@
 
 <script setup>
 </script>
+
+<style>
+body {
+    background-color: #173449;
+    margin: 0;
+}</style>

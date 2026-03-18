@@ -1,24 +1,48 @@
 <template>
     <div class="container">
-        <div class="background-video">
-            <video autoplay muted loop playsinline>
-                <source src="/background.mp4" type="video/mp4">
-            </video>
-        </div>
         <h1 style="font-size: 50px;">SunSafe Dashboard 🕶</h1>
         <p class="subtitle">
             Real-time UV monitoring and protection advice
         </p>
-        <WeatherCard class="card-enter card-delay-1" :location-status="locationStatus" :latitude="latitude"
-            :longitude="longitude" :temperature="temperature" :humidity="humidity" :wind-speed="windSpeed"
-            :weather-desc="weatherDesc" :icon="icon" :timezone="timezone" />
 
+        <div class="search-bar">
+            <input v-model="searchQuery" type="text" placeholder="Search city or suburb (e.g. Melbourne, Clayton)"
+                @keyup.enter="handleSearch" />
+            <button @click="handleSearch" :disabled="loading">
+                Search
+            </button>
+            <button @click="loadCurrentLocationData" :disabled="loading">
+                Use Current Location
+            </button>
+        </div>
 
-        <UVCard class="card-enter card-delay-2" :loading="loading" :error="error" :uv-index="uvIndex"
-            :risk-level="riskLevel" :advice="advice" :risk-color-class="riskColorClass" :humidity="humidity"
-            :wind-speed="windSpeed" />
+        <p class="location-label">
+            {{ locationStatus }}
+        </p>
 
-        <ProtectionList class="card-enter card-delay-3" :uv-index="uvIndex" :risk-level="riskLevel" />
+        <div class="main-layout">
+            <div class="left-panel">
+                <WeatherCard class="card-enter card-delay-1" :location-status="locationStatus" :latitude="latitude"
+                    :longitude="longitude" :temperature="temperature" :humidity="humidity" :wind-speed="windSpeed"
+                    :weather-desc="weatherDesc" :icon="icon" :timezone="timezone" />
+
+                <div class="dashboard-row">
+                    <UVCard class="card-enter card-delay-2 dashboard-card" :loading="loading" :error="error"
+                        :uv-index="uvIndex" :risk-level="riskLevel" :advice="advice" :risk-color-class="riskColorClass"
+                        :humidity="humidity" :wind-speed="windSpeed" />
+
+                    <ProtectionList class="card-enter card-delay-3 dashboard-card" :uv-index="uvIndex"
+                        :risk-level="riskLevel" />
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="future-card-placeholder card-enter card-delay-3">
+                    <h3>Future Forecast</h3>
+                    <p>Coming soon........</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <p class="update-time">
@@ -27,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import WeatherCard from '../components/WeatherCard.vue'
 import UVCard from '../components/UVCard.vue'
 import ProtectionList from '../components/ProtectionList.vue'
@@ -47,6 +71,8 @@ const loading = ref(false)
 const error = ref('')
 const locationStatus = ref('Waiting for location permission...')
 const lastUpdated = ref('')
+const searchQuery = ref('')
+const currentLocationMode = ref(true)
 
 const riskLevel = computed(() =>
     uvIndex.value !== null ? getRiskLevel(uvIndex.value) : ''
@@ -79,35 +105,103 @@ function getUserLocation() {
     })
 }
 
-async function loadUVData() {
+async function searchLocation(query) {
+    const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY
+    const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${apiKey}`
+
+    const response = await fetch(url)
+
+    if (!response.ok) {
+        throw new Error('Failed to search location')
+    }
+
+    const data = await response.json()
+
+    if (!data.length) {
+        throw new Error('Location not found')
+    }
+
+    return {
+        name: data[0].name,
+        state: data[0].state || '',
+        country: data[0].country || '',
+        lat: data[0].lat,
+        lon: data[0].lon
+    }
+}
+
+async function loadWeatherAndUV(lat, lon, labelText) {
+    const data = await fetchCurrentUV(lat, lon)
+
+    latitude.value = lat
+    longitude.value = lon
+    locationStatus.value = labelText
+
+    temperature.value = data.current?.temp != null ? Math.round(data.current.temp) : null
+    humidity.value = data.current?.humidity ?? null
+    icon.value = data.current?.weather?.[0]?.icon ?? ''
+    windSpeed.value = data.current?.wind_speed ?? null
+    timezone.value = data.timezone ?? ''
+    weatherDesc.value = data.current?.weather?.[0]?.description ?? ''
+    uvIndex.value = data.current?.uvi ?? null
+    lastUpdated.value = new Date().toLocaleTimeString()
+
+    if (uvIndex.value === null) {
+        throw new Error('UV index not found in API response')
+    }
+}
+
+async function loadCurrentLocationData() {
     try {
         loading.value = true
         error.value = ''
-        locationStatus.value = 'Getting your location...'
+        currentLocationMode.value = true
+        locationStatus.value = 'Getting your current location...'
 
         const coords = await getUserLocation()
-        latitude.value = coords.lat
-        longitude.value = coords.lon
-        locationStatus.value = 'Location received'
-
-        const data = await fetchCurrentUV(coords.lat, coords.lon)
-        temperature.value = Math.round(data.current?.temp ?? 0) ?? null
-        humidity.value = data.current?.humidity ?? null
-        icon.value = data.current?.weather?.[0]?.icon ?? ''
-        windSpeed.value = data.current?.wind_speed ?? null
-        timezone.value = data.timezone ?? ''
-
-        weatherDesc.value =
-            data.current?.weather?.[0]?.description ?? ''
-        uvIndex.value = data.current?.uvi ?? null
-        lastUpdated.value = new Date().toLocaleTimeString()
-
-        if (uvIndex.value === null) {
-            throw new Error('UV index not found in API response')
-        }
+        await loadWeatherAndUV(
+            coords.lat,
+            coords.lon,
+            'Showing current location weather'
+        )
     } catch (err) {
         error.value = err.message || 'Something went wrong'
-        locationStatus.value = 'Failed to get location or UV data'
+        locationStatus.value = 'Failed to get current location'
+    } finally {
+        loading.value = false
+    }
+}
+
+async function handleSearch() {
+    if (!searchQuery.value.trim()) {
+        error.value = 'Please enter a city or suburb'
+        return
+    }
+
+    try {
+        loading.value = true
+        error.value = ''
+        currentLocationMode.value = false
+        locationStatus.value = 'Searching location...'
+
+        const location = await searchLocation(searchQuery.value.trim())
+
+        const displayName = [
+            location.name,
+            location.state,
+            location.country
+        ]
+            .filter(Boolean)
+            .join(', ')
+
+        await loadWeatherAndUV(
+            location.lat,
+            location.lon,
+            `Showing weather for ${displayName}`
+        )
+    } catch (err) {
+        error.value = err.message || 'Something went wrong'
+        locationStatus.value = 'Failed to search location'
     } finally {
         loading.value = false
     }
@@ -116,31 +210,92 @@ async function loadUVData() {
 let refreshTimer = null
 
 onMounted(() => {
-    loadUVData()
+    loadCurrentLocationData()
 
     refreshTimer = setInterval(() => {
-        loadUVData()
+        if (currentLocationMode.value) {
+            loadCurrentLocationData()
+        } else if (latitude.value !== null && longitude.value !== null) {
+            loadWeatherAndUV(
+                latitude.value,
+                longitude.value,
+                locationStatus.value
+            ).catch((err) => {
+                error.value = err.message || 'Auto refresh failed'
+            })
+        }
     }, 600000)
+})
+
+onUnmounted(() => {
+    if (refreshTimer) {
+        clearInterval(refreshTimer)
+    }
 })
 </script>
 
 <style>
+
+.body{
+    background: #0F3D5E;
+}
+
 .container {
-    max-width: 900px;
-    margin: auto;
-    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 32px;
+    background: transparent;
 }
 
 .subtitle {
-    color: #666;
+    color: #fefefe;
     margin-top: -10px;
     margin-bottom: 25px;
+    font-size: 20px;
+}
+
+.search-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.search-bar input {
+    flex: 1;
+    min-width: 260px;
+    padding: 12px 14px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.search-bar button {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 10px;
+    background: #2c7be5;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.search-bar button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.location-label {
+    margin-bottom: 20px;
+    font-size: 20px;
+    color: white;
 }
 
 .update-time {
     margin-top: 15px;
     font-size: 13px;
     color: #888;
+    text-align: center;
 }
 
 .background-video {
@@ -162,6 +317,120 @@ onMounted(() => {
     opacity: 0;
     transform: translateY(30px);
     animation: fadeUp 3s ease-out forwards;
+}
+
+.main-layout {
+    display: grid;
+    grid-template-columns: minmax(760px, 2.4fr) minmax(320px, 1fr);
+    gap: 24px;
+    margin-top: 20px;
+    align-items: stretch;
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+}
+
+.right-panel {
+    min-width: 0;
+    display: flex;
+}
+
+.dashboard-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.dashboard-card {
+    min-width: 0;
+    height: 100%;
+}
+
+.future-card-placeholder {
+    background: rgba(240, 240, 240, 0.75);
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    color: #555;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.future-card-placeholder p {
+    margin: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.left-panel,
+.right-panel,
+.dashboard-card {
+    min-width: 0;
+}
+
+@media (max-width: 1100px) {
+    .container {
+        padding: 20px;
+    }
+
+    .main-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .right-panel {
+        display: block;
+    }
+
+    .future-card-placeholder {
+        height: auto;
+        min-height: 260px;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+
+    h1 {
+        font-size: 36px !important;
+        line-height: 1.2;
+    }
+
+    .subtitle {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .search-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-bar input,
+    .search-bar button {
+        width: 100%;
+    }
+
+    .dashboard-row {
+        grid-template-columns: 1fr;
+    }
+
+    .location-label,
+    .update-time {
+        font-size: 13px;
+    }
 }
 
 .card-delay-1 {
