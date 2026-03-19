@@ -1,9 +1,11 @@
 <template>
+      <div>
+        <NavBar />
+    </div>
   <div class="analysis-page">
     <div class="page-shell">
       <div class="header">
         <div class="title-wrap">
-          <span class="badge">US 2.2</span>
           <h1>Skin Health Analysis</h1>
         </div>
         <p class="subtitle">Real-time database integration for personalised UV risk insights</p>
@@ -89,6 +91,7 @@
 </template>
 
 <script setup>
+import NavBar from '../components/NavBar.vue'
 import { ref, onMounted, reactive, computed, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import axios from 'axios';
@@ -242,15 +245,6 @@ const updateChart = () => {
 </script>
 
 <style scoped>
-.analysis-page {
-  min-height: 100vh;
-  padding: 40px 20px;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 28%),
-    radial-gradient(circle at top right, rgba(168, 85, 247, 0.08), transparent 24%),
-    linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
-  color: #0f172a;
-}
 
 .page-shell {
   max-width: 980px;
@@ -270,31 +264,17 @@ const updateChart = () => {
   flex-wrap: wrap;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  color: #ffffff;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
-}
-
 .header h1 {
   margin: 0;
   font-size: 2.1rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #f8fafc;
 }
 
 .subtitle {
   margin-top: 12px;
   font-size: 0.95rem;
-  color: #64748b;
+  color: rgba(248, 250, 252, 0.78);
 }
 
 .glass-card {
