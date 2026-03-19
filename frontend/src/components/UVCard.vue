@@ -38,12 +38,13 @@ defineProps({
 <style scoped>
 .uvCard {
     padding: 20px;
-    border-radius: 20px;
+    border-radius: 24px;
     color: white;
     text-align: center;
-    margin-bottom: 15px;
     transition: background 0.3s ease;
+    height: 100%;
 }
+
 
 .adviceBox {
     margin-top: 15px;
